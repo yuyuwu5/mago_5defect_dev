@@ -1,4 +1,6 @@
 model/*
 src/__pycache__
+classification/__pycache__
+detection/__pycache__
 baseline/__pycache__
 baseline/*.pt

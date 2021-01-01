@@ -3,8 +3,22 @@ import numpy as np
 import os
 import torch
 import torch.nn as nn
-from sklearn.metrics import recall_score, precision_score
+from sklearn.metrics import recall_score, precision_score, classification_report
 
+def tmptransform(x):
+    xx = []
+    for i in x:
+        if i == 0:
+            xx.append(1)
+        elif i == 1:
+            xx.append(3)
+        elif i == 2:
+            xx.append(2)
+        elif i == 3:
+            xx.append(0)
+        elif i == 4:
+            xx.append(4)
+    return xx
 
 
 class FiveDefectTrainer(object):
@@ -92,6 +106,7 @@ class FiveDefectTrainer(object):
         return correct / total_num if total_num > 0 else 0
 
     def f1_score(self, predict, real):
+        print(classification_report(real, predict))
         recall = recall_score(real, predict, average=None)
         precision = precision_score(real, predict, average=None)
         recall = np.mean(np.array(recall))
