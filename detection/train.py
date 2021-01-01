@@ -30,7 +30,7 @@ def getData(data_path, img_dir, bz_size, device, mode="train"):
             x, y, dx, dy, disease = data[j:j+5]
             x, y, dx, dy = int(x), int(y), int(dx), int(dy)
             box.append([x, y, x+dx, y+dy])
-            lab.append(DEFECT_TYPE.index(disease))
+            lab.append(DEFECT_TYPE.index(disease)+1)
             one_hot[DEFECT_TYPE.index(disease)] = 1
         ans[idx] = one_hot
         bounding_box.append(box)
@@ -83,7 +83,7 @@ def main(args):
     train_loader, train_ans = getData(TRAIN_CSV, TRAIN_DIR, args.batch_size, device, mode = "train")
     eval_loader, eval_ans = getData(DEV_CSV, DEV_DIR, 8, device, mode = "eval")
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
-    num_classes = 6
+    num_classes = 6 #background + 5 class
     in_features = model.roi_heads.box_predictor.cls_score.in_features
     model.roi_heads.box_predictor = FastRCNNPredictor(in_features, num_classes)
     model.to(device)
