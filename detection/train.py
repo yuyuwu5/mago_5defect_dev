@@ -82,7 +82,7 @@ def main(args):
 
 
     train_loader, train_ans = getData(TRAIN_CSV, TRAIN_DIR, args.batch_size, device, mode = "train")
-    eval_loader, eval_ans = getData(DEV_CSV, DEV_DIR, 8, device, mode = "eval")
+    eval_loader, eval_ans = getData(DEV_CSV, DEV_DIR, args.batch_size, device, mode = "eval")
     model = torchvision.models.detection.fasterrcnn_resnet50_fpn(pretrained = True)
     num_classes = 6 #background + 5 class
     in_features = model.roi_heads.box_predictor.cls_score.in_features
