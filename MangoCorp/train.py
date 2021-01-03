@@ -31,7 +31,7 @@ def getData(bz_size):
     dataset = MangoDetectionData(TEST_DIR, img_name, bounding_box, labels, transforms=getTransform(True))
     dataset_test = MangoDetectionData(TEST_DIR, img_name, bounding_box, labels, transforms=getTransform(False))
     indices = torch.randperm(len(dataset)).tolist()
-    dataset = torch.utils.data.Subset(dataset, indices[:-1000])
+    #dataset = torch.utils.data.Subset(dataset, indices[:-1000])
     dataset_test = torch.utils.data.Subset(dataset, indices[-1000:])
     dataloader = torch.utils.data.DataLoader(dataset, batch_size = bz_size, shuffle=True, num_workers = 4, collate_fn = utils.collate_fn)
     dataloader_eval = torch.utils.data.DataLoader(dataset_test, batch_size = 4, shuffle=False, num_workers = 4, collate_fn = utils.collate_fn)
@@ -77,8 +77,8 @@ def main(args):
         model.train()
         train_one_epoch(model, optimizer, train_loader, device, e, print_freq=100)
         lr_scheduler.step()
-        evaluate(model, eval_loader, device=device)
         torch.save(model.state_dict(), os.path.join(ckpt_path, "%s.pt"%(e)))
+        #evaluate(model, eval_loader, device=device)
                                                                 
     return
 
