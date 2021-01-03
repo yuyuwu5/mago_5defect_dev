@@ -57,8 +57,9 @@ def main(args):
     
     eval_loader, name_list = getData(args.train_ratio, args.batch_size, args.seed)
     logging.info("Load model")
-    model = ptcv_get_model("resnet50", pretrained=True)
-    model.output = torch.nn.Linear(2048, 5)
+    #model = ptcv_get_model("resnet50", pretrained=True)
+    model = ptcv_get_model("resnet34", pretrained=True)
+    model.output = torch.nn.Linear(model.output.in_features, 5)
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.to(device)
     test_ans = []
@@ -72,6 +73,7 @@ def main(args):
             test_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
     result = torch.cat(test_ans).cpu().numpy()
     out = pd.DataFrame(data=result, index=name_list, columns=["D1","D2","D3", "D4","D5"])
+    out.index.name = 'image_id'
     out.to_csv('test_predict.csv')
     logging.info("Done")
 

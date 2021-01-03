@@ -1,6 +1,11 @@
 model/*
 src/__pycache__
 classification/__pycache__
+classificationV2/model
+classificationV2/__pycache__
 detection/__pycache__
+detection/model
 baseline/__pycache__
 baseline/*.pt
+data
+*.csv

@@ -61,7 +61,7 @@ def getData(ratio, batch_size, seed):
     train_pos_weight = train_pos_weight / train_pos_weight[0]
     '''
     total_train = len(train_one_hot)
-    train_pos_weight = np.array([total_train for i in range(5)]) / train_pos_count 
+    train_pos_weight = np.array([total_train - train_pos_count[i] for i in range(5)]) / train_pos_count
 
     eval_csv = pd.read_csv(DEV_CROP_CSV)
     eval_img_names = eval_csv.iloc[:,0].tolist()

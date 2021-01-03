@@ -6,6 +6,7 @@ import torch.nn as nn
 
 from sklearn.metrics import recall_score, precision_score, classification_report
 from tqdm import tqdm
+from config import DEFECT_TYPE
 
 class FiveDefectTrainer(object):
     def __init__(self, train_loader, eval_loader, model, device, ckpt_path=None):
@@ -45,10 +46,18 @@ class FiveDefectTrainer(object):
                 predict_prob = torch.sigmoid(logits)
                 train_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
                 train_real_ans.append(y)
-            train_f1 = self.f1_score(train_ans, train_real_ans)
-            logging.info("Epoch %s, Training f1 score: %s" %(e, train_f1))
-            eval_f1 = self.eval()
-            logging.info("Epoch %s, Eval f1 score: %s" %(e, eval_f1))
+                
+            #train_f1 = self.f1_score(train_ans, train_real_ans)
+            #logging.info("Epoch %s, Training f1 score: %s" %(e, train_f1))
+            train_rep, train_rep_dict = self.get_classification_report(train_ans, train_real_ans)
+            train_f1 = self.get_f1(train_rep_dict)
+            logging.info("Epoch %s, Training:\n%s\n F1: %s" %(e, train_rep, train_f1))
+
+            eval_ans, eval_real_ans = self.eval()
+            eval_rep, eval_rep_dict = self.get_classification_report(eval_ans, eval_real_ans)
+            eval_f1 = self.get_f1(eval_rep_dict)
+            logging.info("Epoch %s, Eval:\n%s\n F1: %s" %(e, eval_rep, eval_f1))
+
             if eval_f1 > best_f1:
                 best_f1 = eval_f1
                 logging.info("Best performance ever, save model")
@@ -68,9 +77,26 @@ class FiveDefectTrainer(object):
                 predict_prob = torch.sigmoid(logits)
                 eval_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
                 eval_real_ans.append(y)
-        eval_f1 = self.f1_score(eval_ans, eval_real_ans)
-        return eval_f1
+        
+        #eval_f1 = self.f1_score(eval_ans, eval_real_ans)
+        return eval_ans, eval_real_ans
 
+    def get_classification_report(self, predict, real):
+        predict = torch.cat(predict).cpu().numpy()
+        real = torch.cat(real).cpu().numpy()
+        rep = classification_report(real, predict, target_names=DEFECT_TYPE)
+        rep_dict = classification_report(real, predict, target_names=DEFECT_TYPE, output_dict=True)
+
+        return rep, rep_dict
+
+    def get_f1(self, clf_rep):
+        ### clf_rep should be a classification report dict
+        macro_precision = clf_rep['macro avg']['precision']
+        macro_recall = clf_rep['macro avg']['recall']
+        #print(macro_precision, macro_recall)
+        f1_score = 2* macro_precision* macro_recall / (macro_precision + macro_recall)
+        
+        return f1_score
 
     def f1_score(self, predict, real):
         predict = torch.cat(predict).cpu().numpy()
@@ -78,6 +104,9 @@ class FiveDefectTrainer(object):
         recall = []
         precision = []
         for i in range(5):
+            print(real[i].shape)
+            print(predict[i].shape)
+            #exit(0)
             r = recall_score(real[i], predict[i])
             p = precision_score(real[i], predict[i])
             recall.append(r)
