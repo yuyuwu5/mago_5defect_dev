@@ -111,8 +111,11 @@ def main(args):
     train_loader, eval_loader, pos_weight = getData(args.train_ratio, args.batch_size, args.seed)
     config['pos_weight'] = torch.tensor(pos_weight).to(torch.float).to(device)
     logging.info("Load model")
-    model = ptcv_get_model("resnext101_32x4d", pretrained=True)
-    model.output = torch.nn.Linear(2048, 5)
+    #model = ptcv_get_model("resnext101_32x4d", pretrained=True)
+    model = ptcv_get_model("resnet34", pretrained=True)
+    ### resnet34 512, 1000
+    ### resnext 2048, 1000
+    model.output = torch.nn.Linear(model.output.in_features, 5)
     model.to(device)
     trainer = FiveDefectTrainer(train_loader, eval_loader, model, device, ckpt_path)
     trainer.train(config)
@@ -126,7 +129,7 @@ def _parse_argument():
     parser.add_argument('--epoch', type=int, default=20)
     parser.add_argument('--seed', type=int, default=502087)
     parser.add_argument('--train_ratio', type=float, default=0.8)
-    parser.add_argument('--cuda', type=int, default=0)
+    parser.add_argument('--cuda', type=int, default=3)
     parser.add_argument('--batch_size', type=int, default=64)
     parser.add_argument('--momentum', type=float, default=0.9)
     parser.add_argument('--lr_min', type=float, default=0.)

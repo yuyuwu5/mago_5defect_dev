@@ -34,7 +34,7 @@ class FiveDefectTrainer(object):
             self.model.train()
             train_ans = []
             train_real_ans = []
-            for idx, (x, y) in enumerate(self.train_loader):
+            for idx, (x, y) in enumerate(tqdm(self.train_loader)):
                 optimizer.zero_grad()
                 x, y = x.to(self.device), y.to(torch.float).to(self.device)
                 logits = self.model(x)
