@@ -5,6 +5,7 @@ import torch
 import torch.nn as nn
 
 from sklearn.metrics import recall_score, precision_score, classification_report
+from lr_scheduler import warm_restart
 from tqdm import tqdm
 
 class FiveDefectTrainer(object):
@@ -42,6 +43,7 @@ class FiveDefectTrainer(object):
                 loss.backward()
                 optimizer.step()
                 scheduler.step()
+                scheduler = warm_restart(scheduler, T_mult=2)
                 predict_prob = torch.sigmoid(logits)
                 train_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
                 train_real_ans.append(y)
@@ -77,13 +79,21 @@ class FiveDefectTrainer(object):
         real = torch.cat(real).cpu().numpy()
         recall = []
         precision = []
-        for i in range(5):
-            r = recall_score(real[i], predict[i])
-            p = precision_score(real[i], predict[i])
+        num_class = predict.shape[1]
+        for i in range(num_class):
+            r = recall_score(real[:,i], predict[:,i])
+            p = precision_score(real[:,i], predict[:,i])
             recall.append(r)
             precision.append(p)
-        logging.info("Five class recall: %s, %s, %s, %s, %s", recall[0], recall[1], recall[2], recall[3], recall[4])
-        logging.info("Five class precision: %s, %s, %s, %s, %s", precision[0], precision[1], precision[2], precision[3], precision[4])
+
+        recall_info = "Recall: "
+        for r in recall:
+            recall_info +=  "%.3f, "%(r)
+        precision_info = "Precision: "
+        for p in precision:
+            precision_info +=  "%.3f, "%(p)
+        logging.info(recall_info)
+        logging.info(precision_info)
         recall = np.mean(np.array(recall))
         precision = np.mean(np.array(precision))
         return (2*precision*recall)/(precision+recall)

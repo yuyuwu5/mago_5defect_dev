@@ -22,8 +22,8 @@ def getData(ratio, batch_size, seed):
     std = (0.229, 0.224, 0.225)
     #jitter_param = 0.4
     eval_transform = torchvision.transforms.Compose([ \
-            #torchvision.transforms.Resize((224,224)),
-        torchvision.transforms.Resize((512, 512)),
+        torchvision.transforms.Resize((224,224)),
+        #torchvision.transforms.Resize((512, 512)),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=mean, std=std),
     ])
@@ -59,11 +59,11 @@ def main(args):
     
     eval_loader, name_list = getData(args.train_ratio, args.batch_size, args.seed)
     logging.info("Load model")
-    '''
-    model = ptcv_get_model("resnext101_32x4d", pretrained=True)
+    
+    model = ptcv_get_model("resnet152", pretrained=True)
     model.output = torch.nn.Linear(2048, 5)
-    '''
-    model = EfficientModel(1)
+    
+    #model = EfficientModel(5)
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.to(device)
     test_ans = []
@@ -74,12 +74,10 @@ def main(args):
             x = x.to(device)
             logits = model(x)
             predict_prob = torch.sigmoid(logits)
-            test_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
-    result = torch.cat(test_ans).cpu().numpy()
-    out = pd.DataFrame(data=result, index=name_list)#, columns=["D1","D2","D3", "D4","D5"])
-    #out = pd.DataFrame(data=result, index=name_list, columns=["D1","D2","D3", "D4","D5"])
-    out.index.name = "image_id"
-    out.to_csv('test_predict.csv')
+            #test_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
+            test_ans.append(predict_prob)
+    test_ans = torch.cat(test_ans).to(torch.device('cpu'))
+    torch.save(test_ans, ckpt_path+".logit")
     logging.info("Done")
 
     return

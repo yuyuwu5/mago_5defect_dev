@@ -20,7 +20,7 @@ class MangoDataset(Dataset):
         y = []
         if self.transform:
             img = self.transform(img)
-        if self.labels:
+        if self.labels is not None:
             y = torch.tensor(self.labels[idx])
         return img, y
     

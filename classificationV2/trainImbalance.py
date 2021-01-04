@@ -13,23 +13,23 @@ from MangoDataset import MangoDataset
 from Trainer import FiveDefectTrainer
 from pytorchcv.model_provider import get_model as ptcv_get_model
 from model import EfficientModel
-from lr_scheduler import WarmRestart
+from BiasSampler import BiasSampler
 
-def getData(ratio, batch_size, seed):
+def getData(ratio, batch_size, seed, target_col):
     logging.info("Load Dataset")
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
-    jitter_param = 0.1
+    #jitter_param = 0.4
     train_transform = torchvision.transforms.Compose([ \
         torchvision.transforms.Resize((512,512)),
-            #torchvision.transforms.Resize((224,224)),
+        #torchvision.transforms.Resize((224,224)),
         torchvision.transforms.RandomHorizontalFlip(),
         torchvision.transforms.RandomVerticalFlip(),
         torchvision.transforms.RandomRotation(15),
-        torchvision.transforms.ColorJitter(
-            brightness=jitter_param,
-            contrast=jitter_param,
-            saturation=jitter_param),
+        #torchvision.transforms.ColorJitter(
+        #    brightness=jitter_param,
+        #    contrast=jitter_param,
+        #    saturation=jitter_param),
         torchvision.transforms.ToTensor(),
         torchvision.transforms.Normalize(mean=mean, std=std),
 
@@ -57,14 +57,13 @@ def getData(ratio, batch_size, seed):
             disease = tmp_data[j+4]
             train_one_hot[i][DEFECT_TYPE.index(disease)] = 1
     train_pos_count = np.array(train_one_hot).sum(axis=0)
-    '''
-    all_prob = np.prod(train_pos_count)
-    all_prob = np.array([all_prob for i in range(5)])
-    train_pos_weight = all_prob / train_pos_count
-    train_pos_weight = train_pos_weight / train_pos_weight[0]
-    '''
     total_train = len(train_one_hot)
     train_pos_weight = np.array([total_train-train_pos_count[i] for i in range(5)]) / train_pos_count 
+
+    pos = np.array(train_one_hot)[:, target_col]
+    pos_idx = pos.nonzero()[0].tolist()
+    neg_idx = (pos==0).nonzero()[0].tolist()
+    pos_weight = 3
 
     eval_csv = pd.read_csv(DEV_CROP_CSV)
     eval_img_names = eval_csv.iloc[:,0].tolist()
@@ -82,13 +81,13 @@ def getData(ratio, batch_size, seed):
             disease = tmp_data[j+4]
             eval_one_hot[i][DEFECT_TYPE.index(disease)] = 1
 
-    train_data = MangoDataset(TRAIN_DIR, train_img_names,bbox=train_bbox, labels=train_one_hot, transform = train_transform)
-    eval_data = MangoDataset(DEV_DIR, eval_img_names, bbox=eval_bbox, labels=eval_one_hot, transform = eval_transform)
+    train_data = MangoDataset(TRAIN_DIR, train_img_names,bbox=train_bbox, labels=np.expand_dims(np.array(train_one_hot)[:,target_col], axis=1), transform = train_transform)
+    eval_data = MangoDataset(DEV_DIR, eval_img_names, bbox=eval_bbox, labels=np.expand_dims(np.array(eval_one_hot)[:,target_col],axis=1), transform = eval_transform)
 
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4)
+    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, sampler=BiasSampler(pos_idx, neg_idx, pos_weight = pos_weight), num_workers=4)
     eval_loader = torch.utils.data.DataLoader(eval_data, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    return train_loader, eval_loader, train_pos_weight
+    return train_loader, eval_loader, pos_weight
 
 
 
@@ -111,21 +110,18 @@ def main(args):
     with open(os.path.join(ckpt_path, 'config.json'), 'w') as f:
         json.dump(config, f)
 
-    train_loader, eval_loader, pos_weight = getData(args.train_ratio, args.batch_size, args.seed)
+
+    target_col = 4 #機械傷害
+    logging.info("Target class is %s" %(DEFECT_TYPE[target_col]))
+
+    train_loader, eval_loader, pos_weight = getData(args.train_ratio, args.batch_size, args.seed, target_col) 
     config['pos_weight'] = torch.tensor(pos_weight).to(torch.float).to(device)
-                
     logging.info("Load model")
-    
-    model = ptcv_get_model("seresnext50_32x4d", pretrained=True)
-    #print(model)
-    model.output = torch.nn.Linear(204800, 5)
-    #model.output = torch.nn.Linear(model.output.in_features, 5)
-    #print(model)
-    config['optimizer'] = torch.optim.Adam(model.parameters(), lr=0.001, betas=(0.9, 0.999), eps=1e-08, weight_decay=0)
-    config['scheduler'] = WarmRestart(config['optimizer'], T_max=10, T_mult=1, eta_min=1e-5)
     '''
-    model = EfficientModel(5)
+    model = ptcv_get_model("resnet152", pretrained=True)
+    model.output = torch.nn.Linear(model.output.in_features, 5)
     '''
+    model = EfficientModel(1)
     model.to(device)
     trainer = FiveDefectTrainer(train_loader, eval_loader, model, device, ckpt_path)
     trainer.train(config)
