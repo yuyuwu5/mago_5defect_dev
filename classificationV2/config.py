@@ -10,10 +10,12 @@ MODEL_DIR = os.path.join(PROJECT_ROOT, "model")
 TRAIN_DIR = os.path.join(DATA_DIR, "Train")
 TRAIN_CSV = os.path.join(DATA_DIR, "train.csv")
 TRAIN_CROP_CSV = os.path.join(DATA_DIR, "train_crop.csv")
+TRAIN_LABEL_CSV = os.path.join(DATA_DIR, "trainlabel.csv")
 
 DEV_DIR = os.path.join(DATA_DIR, "Dev")
 DEV_CSV = os.path.join(DATA_DIR, "dev.csv")
 DEV_CROP_CSV = os.path.join(DATA_DIR, "eval_crop.csv")
+DEV_LABEL_CSV = os.path.join(DATA_DIR, "devlabel.csv")
 
 
 TEST_DIR = os.path.join(DATA_DIR, "Test")

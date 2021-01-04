@@ -18,8 +18,7 @@ class FiveDefectTrainer(object):
         self.ckpt_path = ckpt_path
 
     def train(self, config):
-        #criterion = nn.BCEWithLogitsLoss(pos_weight=config['pos_weight'])
-        criterion = FocalLoss2d(gamma = 4, weight = config['pos_weight'])
+        criterion = nn.BCEWithLogitsLoss(pos_weight=config['pos_weight'])
         if "optimizer" in config:
             optimizer = config["optimizer"]
         else:
