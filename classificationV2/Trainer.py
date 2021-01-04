@@ -7,6 +7,7 @@ import torch.nn as nn
 from sklearn.metrics import recall_score, precision_score, classification_report
 from tqdm import tqdm
 from config import DEFECT_TYPE
+from FocalLoss import FocalLoss2d
 
 class FiveDefectTrainer(object):
     def __init__(self, train_loader, eval_loader, model, device, ckpt_path=None):
@@ -17,7 +18,8 @@ class FiveDefectTrainer(object):
         self.ckpt_path = ckpt_path
 
     def train(self, config):
-        criterion = nn.BCEWithLogitsLoss(pos_weight=config['pos_weight'])
+        #criterion = nn.BCEWithLogitsLoss(pos_weight=config['pos_weight'])
+        criterion = FocalLoss2d(gamma = 4, weight = config['pos_weight'])
         if "optimizer" in config:
             optimizer = config["optimizer"]
         else:
