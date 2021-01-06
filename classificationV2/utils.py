@@ -42,11 +42,31 @@ def getData(ratio, batch_size, seed):
         torchvision.transforms.Normalize(mean=mean, std=std),
 
     ])
-    eval_transform = torchvision.transforms.Compose([ \
-        torchvision.transforms.Resize((224,224)),
+    brightness_factors = np.linspace(0.5, 1.5, 10)
+    eval_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((224, 224)),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=mean, std=std),
+        torchvision.transforms.Normalize(mean=mean, std=std)
     ])
+    """
+    eval_transform = torchvision.transforms.Compose([
+        torchvision.transforms.Resize((224, 224)),
+        torchvision.transforms.TenCrop(224),
+        torchvision.transforms.Lambda(lambda crops:[
+            torchvision.transforms.functional.adjust_brightness(
+                crop, brightness_factor
+            ) for crop, brightness_factor in zip(crops, brightness_factors)
+        ]),
+        torchvision.transforms.Lambda(lambda crops: torch.stack(
+            [torchvision.transforms.ToTensor()(crop) for crop in crops])
+        ),
+        torchvision.transforms.Lambda(lambda crops: torch.stack(
+            [torchvision.transforms.Normalize(mean=mean, std=std)(crop) for crop in crops])
+        ),
+        
+        #torchvision.transforms.ToTensor(),
+    ])
+    """
 
     ### TRAIN DATA ###
     train_csv = pd.read_csv(TRAIN_LABEL_CSV)
@@ -78,7 +98,8 @@ def getData(ratio, batch_size, seed):
     train_data = MangoDataset(TRAIN_DIR, train_img_names,bbox=train_bbox, labels=train_one_hot, transform = train_transform)
     eval_data = MangoDataset(DEV_DIR, eval_img_names, bbox=eval_bbox, labels=eval_one_hot, transform = eval_transform)
 
-    train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4)
-    eval_loader = torch.utils.data.DataLoader(eval_data, batch_size=batch_size, shuffle=False, num_workers=4)
+    #train_loader = torch.utils.data.DataLoader(train_data, batch_size=batch_size, shuffle=True, num_workers=4)
+    #eval_loader = torch.utils.data.DataLoader(eval_data, batch_size=batch_size, shuffle=False, num_workers=4)
 
-    return train_loader, eval_loader, train_pos_weight
+    #return train_loader, eval_loader, train_pos_weight
+    return train_data, eval_data, train_pos_weight
