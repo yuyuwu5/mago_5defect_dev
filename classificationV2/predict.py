@@ -20,11 +20,24 @@ def getData(ratio, batch_size, seed):
     mean = (0.485, 0.456, 0.406)
     std = (0.229, 0.224, 0.225)
     #jitter_param = 0.4
+    brightness_factors = np.linspace(0.5, 1.5, 10)
+    eval_transform = torchvision.transforms.Compose([ \
+        torchvision.transforms.Resize((256,256)),
+        torchvision.transforms.TenCrop(224),
+        torchvision.transforms.Lambda(lambda crops: torch.stack(
+            [torchvision.transforms.ToTensor()(crop) for crop in crops])
+        ),
+        torchvision.transforms.Lambda(lambda crops: torch.stack(
+            [torchvision.transforms.Normalize(mean=mean, std=std)(crop) for crop in crops])
+        )
+    ])
+    """
     eval_transform = torchvision.transforms.Compose([ \
         torchvision.transforms.Resize((224,224)),
         torchvision.transforms.ToTensor(),
-        torchvision.transforms.Normalize(mean=mean, std=std),
+        torchvision.transforms.Normalize(mean=mean, std=std)
     ])
+    """
 
 
     eval_csv = pd.read_csv(TEST_BOX)
@@ -50,7 +63,8 @@ def main(args):
     device = torch.device("cuda:%s"%(args.cuda) if torch.cuda.is_available() else "cpu")
     logging.info("Using device %s" %(device))
     #writer = SummaryWriter("runs/%s"%(args.description))
-    ckpt_path = os.path.join(MODEL_DIR, args.description)
+    #ckpt_path = os.path.join(MODEL_DIR, args.description)
+    ckpt_path = os.path.join(args.description)
     if not os.path.exists(ckpt_path):
         logging.info("CKPT not exist")
         exit(0)
@@ -58,7 +72,8 @@ def main(args):
     eval_loader, name_list = getData(args.train_ratio, args.batch_size, args.seed)
     logging.info("Load model")
     #model = ptcv_get_model("resnet50", pretrained=True)
-    model = ptcv_get_model("resnet34", pretrained=True)
+    #model = ptcv_get_model("resnet34", pretrained=True)
+    model = ptcv_get_model("resnet18", pretrained=True)
     model.output = torch.nn.Linear(model.output.in_features, 5)
     model.load_state_dict(torch.load(ckpt_path, map_location=device))
     model.to(device)
@@ -67,8 +82,13 @@ def main(args):
     model.eval()
     with torch.no_grad():
         for x,y in tqdm(eval_loader):
+            bs, ncrop, c, m, n = x.shape
+            x = x.reshape(-1, c, m, n)
             x = x.to(device)
             logits = model(x)
+
+            logits = logits.reshape(bs, ncrop, -1)
+            logits = logits.mean(axis=1)
             predict_prob = torch.sigmoid(logits)
             test_ans.append(torch.where(predict_prob>0.5, torch.ones_like(logits), torch.zeros_like(logits)))
     result = torch.cat(test_ans).cpu().numpy()
